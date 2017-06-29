@@ -1,0 +1,54 @@
+---
+- hosts: all
+  become: yes
+  become_user: root
+  tasks:
+    
+  - name: Update the package database
+    apt:
+      update_cache: yes
+
+  - name: Install APT repository management tools and support for https repositories 
+    apt:
+      name: apt-transport-https
+      name: software-properties-common
+
+  - name: Add the GPG key for the official Docker repository to the system
+    apt_key:
+      keyserver: hkp://p80.pool.sks-keyservers.net:80
+      id: 58118E89F3A912897C070ADBF76221572C52609D
+
+  - name: Add the Docker repository to APT sources
+    apt_repository:
+      repo: deb https://apt.dockerproject.org/repo ubuntu-xenial main
+      state: present   
+
+  - name: Update the package database with the Docker packages from the newly added repo
+    apt:
+      update_cache: yes
+
+  - name: Install Docker
+    apt:
+      name: docker-engine
+      update_cache: yes
+
+  - name: Get system type
+    command: uname -s
+    register: system_name
+
+  - name: Get system architecture
+    command: uname -m
+    register: system_architecture
+
+  - name: Get latest docker-compose version json_response
+    uri: url="https://api.github.com/repos/docker/compose/releases/latest" return_content=yes  
+    register: json_response        
+
+  - name: Download and install docker compose
+    get_url:
+      url: https://github.com/docker/compose/releases/download/{{json_response | json_query('json.name')}}/docker-compose-{{system_name.stdout}}-{{system_architecture.stdout}}
+      dest: /usr/local/bin/docker-compose
+      mode: 0777
+
+
+
